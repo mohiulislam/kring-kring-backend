@@ -118,6 +118,11 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
           group: group._id,
           role: 'member',
         });
+        await this.userModel.findByIdAndUpdate(sub, {
+          $push: {
+            groups: group._id,
+          },
+        });
       }
     }
   }
@@ -146,8 +151,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       content: payload.message,
       group: payload.groupId,
     });
-    
-     this.userModel.findByIdAndUpdate(sub, {
+    this.userModel.findByIdAndUpdate(sub, {
       $push: {
         messages: message._id,
       },

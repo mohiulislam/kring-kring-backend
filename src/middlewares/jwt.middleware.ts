@@ -12,11 +12,9 @@ export class JwtMiddleware implements NestMiddleware {
       const token = authHeader.split(' ')[1];
       try {
         const decoded = this.jwtService.verify(token);
-        // Set the decoded token in a custom header
         res.setHeader('X-User', JSON.stringify(decoded));
       } catch (error) {
         console.error('Token verification failed:', error);
-        // Handle the error appropriately
       }
     }
     next();

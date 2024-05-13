@@ -41,8 +41,8 @@ export class User {
   @Prop([{ type: SchemaTypes.ObjectId, ref: 'Message' }])
   messages: Message[];
 
-  @Prop([{ type: SchemaTypes.ObjectId, ref: 'GroupUser' }])
-  groups: GroupUser[];
+  @Prop([{ type: SchemaTypes.ObjectId, ref: 'Group' }])
+  groups: Group[];
 
   @Prop({ type: ContactInfo, ref: 'ContactInfo' })
   contactInfo: ContactInfo;
