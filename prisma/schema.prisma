@@ -1,0 +1,79 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+ id        String    @id @default(auto()) @map("_id") @db.ObjectId
+ firstName String?
+ lastName String?
+ password String
+ userName String    @unique
+ messages Message[]
+ groups    GroupUser[]
+ contactInfo ContactInfo
+ isOnline Boolean   @default(false)
+ createdAt DateTime @default(now())
+ updatedAt DateTime @updatedAt
+}
+
+model ContactInfo {
+ email     String? @unique
+ phone     String? @unique
+}
+
+
+model Message {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String
+  groupId   String
+  content   String
+  user      User    @relation(fields: [userId], references: [id])
+  media     Media[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Media {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  url       String
+  type      MediaType
+  messageId String
+  message   Message @relation(fields: [messageId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Group {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  name      String
+  users     GroupUser[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model GroupUser {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String
+  groupId   String
+  group     Group    @relation(fields: [groupId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
+  role      GroupRole
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum MediaType {
+  photo
+  video
+  audio
+}
+
+enum GroupRole {
+  admin
+  member
+}
