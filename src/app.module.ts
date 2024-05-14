@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AuthModule } from './auth/auth.module';
 
@@ -6,6 +6,8 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ChatModule } from './chat/chat.module';
 import { MongooseModule } from '@nestjs/mongoose';
 import { GroupModule } from './group/group.module';
+import { MessageModule } from './message/message.module';
+import { JwtUserAuthenticationMiddleware } from './middlewares/auth.middleware';
 @Module({
   imports: [
     ConfigModule.forRoot(),
@@ -22,8 +24,12 @@ import { GroupModule } from './group/group.module';
     AuthModule,
     ChatModule,
     GroupModule,
+    MessageModule,
   ],
   controllers: [AppController],
 })
-export class AppModule {}
-
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(JwtUserAuthenticationMiddleware).forRoutes('*');
+  }
+}

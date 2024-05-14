@@ -11,16 +11,19 @@ export class WsJwtAuthGuard implements CanActivate {
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    console.log("from guard");
-    
+    console.log('from guard');
+
     if (context.getType() !== 'ws') {
       return true;
     }
     const client = context.switchToWs().getClient<Socket>();
     const bearerToken = client.handshake.headers.authorization;
-    return this.authService.verifyJWTBearerToken(
+
+    const decoded = await this.authService.verifyJWTBearerToken(
       bearerToken,
       this.configService.get('JWT_SECRET'),
     );
+    client.handshake.headers.user = decoded;
+    return decoded;
   }
 }

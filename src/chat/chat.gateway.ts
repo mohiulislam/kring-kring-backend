@@ -17,8 +17,8 @@ import { WsJwtAuthGuard } from 'src/auth/ws-jwt.guard';
 import { Group, GroupUser, Message, User } from 'src/schema/schema';
 import { JoinGroupPayloadDto } from './dto/join-payload.dto';
 import { MessagePayloadDto } from './dto/message-payload-dto';
-
-@WebSocketGateway({ namespace: 'chat' })
+@UseGuards(WsJwtAuthGuard)
+@WebSocketGateway({ namespace: 'chatWS' })
 @UsePipes(new ValidationPipe())
 export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer() server: Server;
@@ -73,10 +73,8 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @MessageBody() payload: JoinGroupPayloadDto,
     @ConnectedSocket() client: Socket,
   ) {
-    const { sub } = await this.authService.verifyJWTBearerToken(
-      client.handshake.headers.authorization,
-      this.configService.get('JWT_SECRET'),
-    );
+    const sub = client.handshake.headers.user['sub'];
+
     const participant = await this.userModel.findOne({
       username: payload.participantUserName,
     });
@@ -133,10 +131,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @MessageBody() payload: MessagePayloadDto,
     @ConnectedSocket() client: Socket,
   ) {
-    const { sub } = await this.authService.verifyJWTBearerToken(
-      client.handshake.headers.authorization,
-      this.configService.get('JWT_SECRET'),
-    );
+    const sub = client.handshake.headers.user['sub'];
 
     this.server.to(payload.groupId).emit('message', {
       content: payload.message,
@@ -151,7 +146,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       content: payload.message,
       group: payload.groupId,
     });
-    this.userModel.findByIdAndUpdate(sub, {
+    await this.userModel.findByIdAndUpdate(sub, {
       $push: {
         messages: message._id,
       },
