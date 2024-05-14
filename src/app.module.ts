@@ -5,6 +5,7 @@ import { AuthModule } from './auth/auth.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ChatModule } from './chat/chat.module';
 import { MongooseModule } from '@nestjs/mongoose';
+import { GroupModule } from './group/group.module';
 @Module({
   imports: [
     ConfigModule.forRoot(),
@@ -20,6 +21,7 @@ import { MongooseModule } from '@nestjs/mongoose';
     }),
     AuthModule,
     ChatModule,
+    GroupModule,
   ],
   controllers: [AppController],
 })

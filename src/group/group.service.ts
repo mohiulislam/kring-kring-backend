@@ -4,11 +4,10 @@ import { Model } from 'mongoose';
 import { User } from 'src/schema/schema';
 
 @Injectable()
-export class ChatService {
+export class GroupService {
   constructor(@InjectModel(User.name) private userModel: Model<User>) {}
   async getGroups(userId) {
     const user = await this.userModel.find({ _id: userId }).populate('groups');
-    console.log(user);
     return user;
   }
 }

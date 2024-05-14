@@ -3,16 +3,16 @@ import { ConfigService } from '@nestjs/config';
 import { AuthGuard } from '@nestjs/passport';
 import { ApiSecurity } from '@nestjs/swagger';
 import { AuthService } from 'src/auth/auth.service';
-import { ChatService } from './chat.service';
+import { GroupService } from './group.service';
 
-@Controller('chat')
+@Controller('groups')
 @ApiSecurity('JWT-auth')
 @UseGuards(AuthGuard('jwt'))
-export class ChatController {
+export class GroupController {
   constructor(
     private authService: AuthService,
     private configService: ConfigService,
-    private chatService: ChatService,
+    private groupService: GroupService,
   ) {}
   @Get()
   async getGroups(@Req() req) {
@@ -20,6 +20,6 @@ export class ChatController {
       req.headers.authorization,
       this.configService.get('JWT_SECRET'),
     );
-    return this.chatService.getGroups(decoded.sub);
+    return this.groupService.getGroups(decoded.sub);
   }
 }
