@@ -1,5 +1,4 @@
 import { Module } from '@nestjs/common';
-import { ChatGateway } from './chat.gateway';
 import { MongooseModule } from '@nestjs/mongoose';
 import {
   Group,
@@ -13,6 +12,7 @@ import {
 } from 'src/schema/schema';
 import { AuthModule } from 'src/auth/auth.module';
 import { ConfigModule } from '@nestjs/config';
+import { RealtimeChatGateway } from './realtime-chat.gateway';
 
 @Module({
   imports: [
@@ -34,6 +34,6 @@ import { ConfigModule } from '@nestjs/config';
       },
     ]),
   ],
-  providers: [ChatGateway],
+  providers: [RealtimeChatGateway],
 })
-export class ChatModule {}
+export class RealtimeChatModule {}

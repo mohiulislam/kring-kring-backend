@@ -8,10 +8,10 @@ import { InjectModel } from '@nestjs/mongoose';
 import * as argon2 from 'argon2';
 import { Model } from 'mongoose';
 import { User } from 'src/schema/schema';
-import { RegisterByEmailDto } from './dto/registerByEmail-dto';
+import { RegisterByEmailDto } from './dtos/register-by-email-dto';
 import * as _ from 'lodash';
-import { RegisterByPhoneDto } from './dto/registerByPhone-dto';
-import { SignInDto } from './dto/signin-dto';
+import { RegisterByPhoneDto } from './dtos/register-by-phone-dto';
+import { SignInDto } from './dtos/signin-dto';
 import { JwtService } from '@nestjs/jwt';
 import * as jwt from 'jsonwebtoken';
 
@@ -101,9 +101,7 @@ export class AuthService {
     return null;
   }
 
-
-
-  async  verifyJWTBearerToken(bearerToken, secretKey) {
+  async verifyJWTBearerToken(bearerToken, secretKey) {
     try {
       const token = bearerToken.split(' ')[1];
       const decoded = jwt.verify(token, secretKey);

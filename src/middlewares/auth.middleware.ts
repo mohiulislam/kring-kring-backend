@@ -10,18 +10,20 @@ export class JwtUserAuthenticationMiddleware implements NestMiddleware {
     private configService: ConfigService,
   ) {}
 
-  use(req: Request, res: Response, next: NextFunction) {
+  async use(req: Request, res: Response, next: NextFunction) {
     const bearerToken = req.headers.authorization;
-    const decoded = this.authService.verifyJWTBearerToken(
+    if (!bearerToken) {
+      return res.status(401).send('Unauthorized');
+    }
+    const decoded =await this.authService.verifyJWTBearerToken(
       bearerToken,
       this.configService.get('JWT_SECRET'),
     );
     if (!decoded) {
       return res.status(401).send('Unauthorized');
     }
-      req.user = decoded;
-      console.log(555555555555);
-      
+    
+    req.user = decoded;
     next();
   }
 }

@@ -15,12 +15,14 @@ import { Server, Socket } from 'socket.io';
 import { AuthService } from 'src/auth/auth.service';
 import { WsJwtAuthGuard } from 'src/auth/ws-jwt.guard';
 import { Group, GroupUser, Message, User } from 'src/schema/schema';
-import { JoinGroupPayloadDto } from './dto/join-payload.dto';
-import { MessagePayloadDto } from './dto/message-payload-dto';
+import { JoinGroupPayloadDto } from './dtos/join-payload.dto';
+import { MessagePayloadDto } from './dtos/message-payload-dto';
 @UseGuards(WsJwtAuthGuard)
 @WebSocketGateway({ namespace: 'chatWS' })
 @UsePipes(new ValidationPipe())
-export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
+export class RealtimeChatGateway
+  implements OnGatewayConnection, OnGatewayDisconnect
+{
   @WebSocketServer() server: Server;
   constructor(
     @InjectModel(Group.name) private groupModel: Model<Group>,
@@ -73,14 +75,20 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @MessageBody() payload: JoinGroupPayloadDto,
     @ConnectedSocket() client: Socket,
   ) {
-    const sub = client.handshake.headers.user['sub'];
+    const user = client.handshake.headers.user;
 
+    if (user['username'] === payload.participantUserName) {
+      return;
+    }
     const participant = await this.userModel.findOne({
       username: payload.participantUserName,
     });
 
     const existingGroupWithParticipant = await this.groupModel.findOne({
-      $and: [{ users: { $in: [sub] } }, { users: { $in: [participant._id] } }],
+      $and: [
+        { users: { $in: user['sub'] } },
+        { users: { $in: [participant._id] } },
+      ],
     });
 
     if (existingGroupWithParticipant) {
@@ -104,10 +112,12 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         participantClient.socket.join(participant._id.toString());
 
         const group = await this.groupModel.create({
-          users: [sub, participant._id],
+          users: [user['sub'], participant._id],
         });
+        console.log(group._id.toString());
+
         this.groupUserModel.create({
-          user: sub,
+          user: user['sub'],
           group: group._id,
           role: 'admin',
         });
@@ -116,7 +126,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
           group: group._id,
           role: 'member',
         });
-        await this.userModel.findByIdAndUpdate(sub, {
+        await this.userModel.findByIdAndUpdate(user['sub'], {
           $push: {
             groups: group._id,
           },
@@ -132,6 +142,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() client: Socket,
   ) {
     const sub = client.handshake.headers.user['sub'];
+    console.log(44444444444);
 
     this.server.to(payload.groupId).emit('message', {
       content: payload.message,
@@ -147,6 +158,11 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       group: payload.groupId,
     });
     await this.userModel.findByIdAndUpdate(sub, {
+      $push: {
+        messages: message._id,
+      },
+    });
+    await this.groupModel.findByIdAndUpdate(payload.groupId, {
       $push: {
         messages: message._id,
       },

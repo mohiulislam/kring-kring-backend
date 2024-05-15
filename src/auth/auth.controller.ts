@@ -2,15 +2,14 @@ import {
   Controller,
   Post,
   Body,
-  HttpCode,
   HttpStatus,
   UseGuards,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
-import { RegisterByEmailDto } from './dto/registerByEmail-dto';
-import { RegisterByPhoneDto } from './dto/registerByPhone-dto';
-import { SignInDto } from './dto/signin-dto';
+import { RegisterByEmailDto } from './dtos/register-by-email-dto';
+import { RegisterByPhoneDto } from './dtos/register-by-phone-dto';
+import { SignInDto } from './dtos/signin-dto';
 import { AuthGuard } from '@nestjs/passport';
 
 @Controller('auth')
@@ -45,7 +44,6 @@ export class AuthController {
   async registerByPhone(@Body() userDto: RegisterByPhoneDto) {
     return this.authService.registerByPhone(userDto);
   }
-
 
   @UseGuards(AuthGuard('local'))
   @Post('login')

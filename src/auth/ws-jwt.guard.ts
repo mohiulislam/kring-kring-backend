@@ -11,8 +11,6 @@ export class WsJwtAuthGuard implements CanActivate {
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    console.log('from guard');
-
     if (context.getType() !== 'ws') {
       return true;
     }

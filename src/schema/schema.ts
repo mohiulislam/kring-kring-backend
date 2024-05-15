@@ -62,6 +62,9 @@ export class Group {
   @Prop([{ type: SchemaTypes.ObjectId, ref: 'User' }])
   users: User[];
 
+  @Prop([{ type: SchemaTypes.ObjectId, ref: 'Message' }])
+  messages: Message[];
+
   @Prop({ type: Date, default: Date.now })
   createdAt: Date;
 
