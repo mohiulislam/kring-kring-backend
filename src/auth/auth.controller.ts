@@ -4,6 +4,8 @@ import {
   Body,
   HttpStatus,
   UseGuards,
+  Put,
+  Param,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
@@ -11,6 +13,8 @@ import { RegisterByEmailDto } from './dtos/register-by-email-dto';
 import { RegisterByPhoneDto } from './dtos/register-by-phone-dto';
 import { SignInDto } from './dtos/signin-dto';
 import { AuthGuard } from '@nestjs/passport';
+import { Sub } from 'src/decorators/sub.decorator';
+import { UpdateUserDto } from './dtos/update-user-dto';
 
 @Controller('auth')
 @ApiTags('Auth')
@@ -45,6 +49,16 @@ export class AuthController {
     return this.authService.registerByPhone(userDto);
   }
 
+  @Put('update-profile')
+  @ApiOperation({ summary: 'Update user profile' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'User profile updated successfully.',
+  })
+  @ApiResponse({
+    status: HttpStatus.NOT_FOUND,
+    description: 'User not found.',
+  })
   @UseGuards(AuthGuard('local'))
   @Post('login')
   @ApiOperation({ summary: 'Login a user' })
@@ -52,6 +66,12 @@ export class AuthController {
     status: HttpStatus.OK,
     description: 'The user has been successfully logged in.',
   })
+  async updateProfile(
+    @Body() updateUserDto: UpdateUserDto,
+    @Sub('userId') userId: string,
+  ) {
+    return this.authService.updateUser(userId, updateUserDto);
+  }
   @ApiResponse({
     status: HttpStatus.UNAUTHORIZED,
     description: 'Invalid credentials.',

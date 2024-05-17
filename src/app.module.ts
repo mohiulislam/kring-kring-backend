@@ -1,14 +1,14 @@
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
-import { AppController } from './app.controller';
-import { AuthModule } from './auth/auth.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
+import { AppController } from './app.controller';
+import { AuthModule } from './auth/auth.module';
+import { GroupMessageController } from './group-message/group-message.controller';
+import { GroupMessageModule } from './group-message/group-message.module';
+import { GroupController } from './group/group.controller';
 import { GroupModule } from './group/group.module';
 import { JwtUserAuthenticationMiddleware } from './middlewares/auth.middleware';
 import { RealtimeChatModule } from './realtime-chat/realtime-chat.module';
-import { GroupMessageModule } from './group-message/group-message.module';
-import { GroupController } from './group/group.controller';
-import { GroupMessageController } from './group-message/group-message.controller';
 
 @Module({
   imports: [

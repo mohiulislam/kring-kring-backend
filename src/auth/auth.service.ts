@@ -111,4 +111,12 @@ export class AuthService {
       return null;
     }
   }
+
+  updateUser(userId, { firstName, lastName }) {
+    return this.userModel.findByIdAndUpdate(
+      userId,
+      { firstName, lastName },
+      { new: true },
+    );
+  }
 }

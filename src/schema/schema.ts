@@ -35,6 +35,9 @@ export class User {
   @Prop({ type: String, required: false })
   lastName?: string;
 
+  @Prop({ type: String, required: false })
+  profilePhoto?: string;
+
   @Prop({ type: Boolean, default: false })
   isOnline: boolean;
 
@@ -89,7 +92,6 @@ export class GroupUser {
   @Prop({ type: Date, default: Date.now })
   updatedAt: Date;
 }
-
 
 @Schema()
 export class Media {
