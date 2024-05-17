@@ -101,7 +101,7 @@ export class RealtimeChatGateway
         participantClient.socket.join(groupId.toString());
         console.log(groupId.toString());
       } else {
-        console.error('Participant client not found');
+        console.error('Participant client are not registered');
       }
     } else {
       if (participant) {
@@ -109,13 +109,17 @@ export class RealtimeChatGateway
           participant._id.toString(),
         );
         client.join(participant._id.toString());
-        participantClient.socket.join(participant._id.toString());
 
+        if (participantClient) {
+          participantClient.socket.join(participant._id.toString());
+        } else {
+          console.error('Participant client is not online');
+        }
+        
         const group = await this.groupModel.create({
           users: [user['sub'], participant._id],
         });
         console.log(group._id.toString());
-
         this.groupUserModel.create({
           user: user['sub'],
           group: group._id,
@@ -142,7 +146,6 @@ export class RealtimeChatGateway
     @ConnectedSocket() client: Socket,
   ) {
     const sub = client.handshake.headers.user['sub'];
-    console.log(44444444444);
 
     this.server.to(payload.groupId).emit('message', {
       content: payload.message,
