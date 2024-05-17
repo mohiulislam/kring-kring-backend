@@ -72,16 +72,16 @@ export class RealtimeChatGateway
   @UseGuards(WsJwtAuthGuard)
   @SubscribeMessage('joinGroupWithParticipant')
   async handleJoinGroup(
-    @MessageBody() payload: JoinGroupPayloadDto,
+    @MessageBody() { participantUserName }: JoinGroupPayloadDto,
     @ConnectedSocket() client: Socket,
   ) {
     const user = client.handshake.headers.user;
 
-    if (user['username'] === payload.participantUserName) {
+    if (user['username'] === participantUserName) {
       return;
     }
     const participant = await this.userModel.findOne({
-      username: payload.participantUserName,
+      username: participantUserName,
     });
 
     const existingGroupWithParticipant = await this.groupModel.findOne({
@@ -108,14 +108,15 @@ export class RealtimeChatGateway
         const participantClient = this.clientsSockets.get(
           participant._id.toString(),
         );
-        client.join(participant._id.toString());
 
         if (participantClient) {
+          client.join(participant._id.toString());
           participantClient.socket.join(participant._id.toString());
         } else {
+          client.send('error', 'Your buddy is not online');
           console.error('Participant client is not online');
         }
-        
+
         const group = await this.groupModel.create({
           users: [user['sub'], participant._id],
         });
@@ -142,32 +143,37 @@ export class RealtimeChatGateway
   @UseGuards(WsJwtAuthGuard)
   @SubscribeMessage('message')
   async handleMessage(
-    @MessageBody() payload: MessagePayloadDto,
+    @MessageBody() { message, groupId }: MessagePayloadDto,
     @ConnectedSocket() client: Socket,
   ) {
     const sub = client.handshake.headers.user['sub'];
 
-    this.server.to(payload.groupId).emit('message', {
-      content: payload.message,
-      groupId: payload.groupId,
+    if (!this.server.sockets.adapter.rooms.has(groupId)) {
+      console.error(`Your buddy is not online.`);
+      return;
+    }
+
+    this.server.to(groupId).emit('message', {
+      content: message,
+      groupId: groupId,
       user: {
         firstName: this.clientsSockets.get(sub).user.firstName,
         lastName: this.clientsSockets.get(sub).user.lastName,
       },
     });
-    const message = await this.messageModel.create({
+    const savedMessage = await this.messageModel.create({
       user: sub,
-      content: payload.message,
-      group: payload.groupId,
+      content: message,
+      group: groupId,
     });
     await this.userModel.findByIdAndUpdate(sub, {
       $push: {
-        messages: message._id,
+        messages: savedMessage._id,
       },
     });
-    await this.groupModel.findByIdAndUpdate(payload.groupId, {
+    await this.groupModel.findByIdAndUpdate(groupId, {
       $push: {
-        messages: message._id,
+        messages: savedMessage._id,
       },
     });
   }
