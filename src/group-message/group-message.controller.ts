@@ -6,7 +6,7 @@ import { Sub } from 'src/decorators/sub.decorator';
 
 @ApiSecurity('JWT-auth')
 @UseGuards(AuthGuard('jwt'))
-@Controller('group-message')
+@Controller('group/message')
 @ApiTags('Group message')
 export class GroupMessageController {
   constructor(private messageService: MessageService) {}

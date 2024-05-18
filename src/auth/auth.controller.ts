@@ -59,6 +59,13 @@ export class AuthController {
     status: HttpStatus.NOT_FOUND,
     description: 'User not found.',
   })
+  async updateProfile(
+    @Body() updateUserDto: UpdateUserDto,
+    @Sub('userId') userId: string,
+  ) {
+    return this.authService.updateUser(userId, updateUserDto);
+  }
+
   @UseGuards(AuthGuard('local'))
   @Post('login')
   @ApiOperation({ summary: 'Login a user' })
@@ -66,12 +73,6 @@ export class AuthController {
     status: HttpStatus.OK,
     description: 'The user has been successfully logged in.',
   })
-  async updateProfile(
-    @Body() updateUserDto: UpdateUserDto,
-    @Sub('userId') userId: string,
-  ) {
-    return this.authService.updateUser(userId, updateUserDto);
-  }
   @ApiResponse({
     status: HttpStatus.UNAUTHORIZED,
     description: 'Invalid credentials.',
