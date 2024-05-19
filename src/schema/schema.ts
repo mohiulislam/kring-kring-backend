@@ -1,5 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { SchemaTypes } from 'mongoose';
+import { Schema as MongooseSchema , SchemaTypes } from 'mongoose';
 
 export enum MediaType {
   photo = 'photo',
@@ -42,10 +42,10 @@ export class User {
   isOnline: boolean;
 
   @Prop([{ type: SchemaTypes.ObjectId, ref: 'Message' }])
-  messages: Message[];
+  messages: MongooseSchema.Types.ObjectId[];
 
   @Prop([{ type: SchemaTypes.ObjectId, ref: 'Group' }])
-  groups: Group[];
+  groups: MongooseSchema.Types.ObjectId[];
 
   @Prop({ type: ContactInfo, ref: 'ContactInfo' })
   contactInfo: ContactInfo;
@@ -63,10 +63,13 @@ export class Group {
   name: string;
 
   @Prop([{ type: SchemaTypes.ObjectId, ref: 'User' }])
-  users: User[];
+  users: MongooseSchema.Types.ObjectId[];
 
   @Prop([{ type: SchemaTypes.ObjectId, ref: 'Message' }])
-  messages: Message[];
+  messages: MongooseSchema.Types.ObjectId[];
+
+  @Prop({ type: SchemaTypes.ObjectId, ref: 'Message' })
+  lastMessage?: MongooseSchema.Types.ObjectId;
 
   @Prop({ type: Date, default: Date.now })
   createdAt: Date;
@@ -78,10 +81,10 @@ export class Group {
 @Schema()
 export class GroupUser {
   @Prop({ type: SchemaTypes.ObjectId, required: true, ref: 'User' })
-  user: User;
+  user: MongooseSchema.Types.ObjectId;
 
   @Prop({ type: SchemaTypes.ObjectId, required: true, ref: 'Group' })
-  group: Group;
+  group: MongooseSchema.Types.ObjectId;
 
   @Prop({ type: String, enum: GroupRole, required: true })
   role: GroupRole;
@@ -108,13 +111,13 @@ export class Message {
   user: User;
 
   @Prop({ type: SchemaTypes.ObjectId, required: true, ref: 'Group' })
-  group: Group;
+  group: MongooseSchema.Types.ObjectId;
 
   @Prop({ type: String, required: true })
   content: string;
 
   @Prop({ type: Media, ref: 'Media' })
-  media: Media;
+  media: MongooseSchema.Types.ObjectId;
 
   @Prop({ type: Date, default: Date.now })
   createdAt: Date;

@@ -33,10 +33,14 @@ export class RealtimeChatGateway
     private configService: ConfigService,
   ) {}
 
-  private clientsSockets = new Map<string, { socket: Socket; user: User }>();
+  private connectedClientsSockets = new Map<
+    string,
+    { socket: Socket; user: User }
+  >();
   private socketToUserIdMap = new Map<string, string>();
 
   async handleConnection(@ConnectedSocket() client: Socket) {
+    
     const { authorization } = client.handshake.headers;
     if (!authorization) {
       client.disconnect();
@@ -52,7 +56,7 @@ export class RealtimeChatGateway
       const user = await this.userModel.findById(sub);
       if (user) {
         this.socketToUserIdMap.set(client.id, sub);
-        this.clientsSockets.set(sub, { socket: client, user });
+        this.connectedClientsSockets.set(sub, { socket: client, user });
         return;
       } else {
         console.error('User not found:', sub);
@@ -64,7 +68,7 @@ export class RealtimeChatGateway
   handleDisconnect(client: Socket) {
     const userId = this.socketToUserIdMap.get(client.id);
     if (userId) {
-      this.clientsSockets.delete(userId);
+      this.connectedClientsSockets.delete(userId);
       this.socketToUserIdMap.delete(client.id);
     }
   }
@@ -91,10 +95,13 @@ export class RealtimeChatGateway
       ],
     });
 
-    if (existingGroupWithParticipant) {
+    if (
+      existingGroupWithParticipant &&
+      this.connectedClientsSockets.get(participant._id.toString())
+    ) {
       const groupId = existingGroupWithParticipant._id;
       if (participant) {
-        const participantClient = this.clientsSockets.get(
+        const participantClient = this.connectedClientsSockets.get(
           participant._id.toString(),
         );
         client.join(groupId.toString());
@@ -105,7 +112,7 @@ export class RealtimeChatGateway
       }
     } else {
       if (participant) {
-        const participantClient = this.clientsSockets.get(
+        const participantClient = this.connectedClientsSockets.get(
           participant._id.toString(),
         );
 
@@ -113,7 +120,7 @@ export class RealtimeChatGateway
           client.join(participant._id.toString());
           participantClient.socket.join(participant._id.toString());
         } else {
-          client.send('error', 'Your buddy is not online');
+          client.emit('error', 'Your buddy is not online');
           console.error('Participant client is not online');
         }
 
@@ -138,6 +145,7 @@ export class RealtimeChatGateway
         });
       }
     }
+    console.log(this.server);
   }
 
   @UseGuards(WsJwtAuthGuard)
@@ -148,19 +156,20 @@ export class RealtimeChatGateway
   ) {
     const sub = client.handshake.headers.user['sub'];
 
-    if (!this.server.sockets.adapter.rooms.has(groupId)) {
-      console.error(`Your buddy is not online.`);
-      return;
+    if (1) {
+      this.server.to(groupId).emit('message', {
+        content: message,
+        groupId: groupId,
+        user: {
+          firstName: this.connectedClientsSockets.get(sub).user.firstName,
+          lastName: this.connectedClientsSockets.get(sub).user.lastName,
+        },
+      });
+    } else {
+      client.emit('error', 'Your buddy is not online');
+      console.error('Participant client is not online');
     }
 
-    this.server.to(groupId).emit('message', {
-      content: message,
-      groupId: groupId,
-      user: {
-        firstName: this.clientsSockets.get(sub).user.firstName,
-        lastName: this.clientsSockets.get(sub).user.lastName,
-      },
-    });
     const savedMessage = await this.messageModel.create({
       user: sub,
       content: message,
@@ -174,6 +183,9 @@ export class RealtimeChatGateway
     await this.groupModel.findByIdAndUpdate(groupId, {
       $push: {
         messages: savedMessage._id,
+      },
+      $set: {
+        lastMessage: savedMessage._id,
       },
     });
   }
