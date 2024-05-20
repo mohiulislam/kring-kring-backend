@@ -17,6 +17,7 @@ import { WsJwtAuthGuard } from 'src/auth/ws-jwt.guard';
 import { Group, GroupUser, Message, User } from 'src/schema/schema';
 import { JoinGroupPayloadDto } from './dtos/join-payload.dto';
 import { MessagePayloadDto } from './dtos/message-payload-dto';
+
 @UseGuards(WsJwtAuthGuard)
 @WebSocketGateway({ namespace: 'chatWS' })
 @UsePipes(new ValidationPipe())
@@ -33,14 +34,12 @@ export class RealtimeChatGateway
     private configService: ConfigService,
   ) {}
 
-  private connectedClientsSockets = new Map<
+  private userIdToSocketInfoMap = new Map<
     string,
-    { socket: Socket; user: User }
+    { socketId: string; user: User }
   >();
-  private socketToUserIdMap = new Map<string, string>();
 
   async handleConnection(@ConnectedSocket() client: Socket) {
-    
     const { authorization } = client.handshake.headers;
     if (!authorization) {
       client.disconnect();
@@ -55,9 +54,7 @@ export class RealtimeChatGateway
       const { sub } = decoded;
       const user = await this.userModel.findById(sub);
       if (user) {
-        this.socketToUserIdMap.set(client.id, sub);
-        this.connectedClientsSockets.set(sub, { socket: client, user });
-        return;
+        this.userIdToSocketInfoMap.set(sub, { socketId: client.id, user });
       } else {
         console.error('User not found:', sub);
         client.disconnect();
@@ -65,12 +62,13 @@ export class RealtimeChatGateway
     }
   }
 
-  handleDisconnect(client: Socket) {
-    const userId = this.socketToUserIdMap.get(client.id);
-    if (userId) {
-      this.connectedClientsSockets.delete(userId);
-      this.socketToUserIdMap.delete(client.id);
-    }
+  async handleDisconnect(client: Socket) {
+    const { authorization } = client.handshake.headers;
+    const { sub } = await this.authService.verifyJWTBearerToken(
+      authorization,
+      this.configService.get('JWT_SECRET'),
+    );
+    this.userIdToSocketInfoMap.delete(sub);
   }
 
   @UseGuards(WsJwtAuthGuard)
@@ -94,31 +92,32 @@ export class RealtimeChatGateway
         { users: { $in: [participant._id] } },
       ],
     });
-
     if (
       existingGroupWithParticipant &&
-      this.connectedClientsSockets.get(participant._id.toString())
+      (this.server.sockets as any).has(
+        this.userIdToSocketInfoMap.get(user['sub']).socketId,
+      )
     ) {
       const groupId = existingGroupWithParticipant._id;
       if (participant) {
-        const participantClient = this.connectedClientsSockets.get(
-          participant._id.toString(),
+        const participantClient = (this.server.sockets as any).get(
+          this.userIdToSocketInfoMap.get(participant._id.toString()).socketId,
         );
         client.join(groupId.toString());
-        participantClient.socket.join(groupId.toString());
+        participantClient.join(groupId.toString());
         console.log(groupId.toString());
       } else {
         console.error('Participant client are not registered');
       }
     } else {
       if (participant) {
-        const participantClient = this.connectedClientsSockets.get(
-          participant._id.toString(),
-        );
+        const participantClient = (this.server.sockets as any).get(
+          this.userIdToSocketInfoMap.get(participant._id.toString()).socketId,
+        ) as Socket;
 
         if (participantClient) {
           client.join(participant._id.toString());
-          participantClient.socket.join(participant._id.toString());
+          participantClient.join(participant._id.toString());
         } else {
           client.emit('error', 'Your buddy is not online');
           console.error('Participant client is not online');
@@ -145,7 +144,6 @@ export class RealtimeChatGateway
         });
       }
     }
-    console.log(this.server);
   }
 
   @UseGuards(WsJwtAuthGuard)
@@ -156,19 +154,14 @@ export class RealtimeChatGateway
   ) {
     const sub = client.handshake.headers.user['sub'];
 
-    if (1) {
-      this.server.to(groupId).emit('message', {
-        content: message,
-        groupId: groupId,
-        user: {
-          firstName: this.connectedClientsSockets.get(sub).user.firstName,
-          lastName: this.connectedClientsSockets.get(sub).user.lastName,
-        },
-      });
-    } else {
-      client.emit('error', 'Your buddy is not online');
-      console.error('Participant client is not online');
-    }
+    this.server.to(groupId).emit('message', {
+      content: message,
+      groupId: groupId,
+      user: {
+        firstName: this.userIdToSocketInfoMap.get(sub).user.firstName,
+        lastName: this.userIdToSocketInfoMap.get(sub).user.lastName,
+      },
+    });
 
     const savedMessage = await this.messageModel.create({
       user: sub,
