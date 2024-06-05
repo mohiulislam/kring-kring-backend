@@ -9,6 +9,9 @@ import { GroupController } from './group/group.controller';
 import { GroupModule } from './group/group.module';
 import { JwtUserAuthenticationMiddleware } from './middlewares/auth.middleware';
 import { RealtimeChatModule } from './realtime-chat/realtime-chat.module';
+import { EmailService } from './email/email.service';
+import { EmailModule } from './email/email.module';
+
 
 @Module({
   imports: [
@@ -27,6 +30,7 @@ import { RealtimeChatModule } from './realtime-chat/realtime-chat.module';
     RealtimeChatModule,
     GroupModule,
     GroupMessageModule,
+    EmailModule,
   ],
   controllers: [AppController],
 })

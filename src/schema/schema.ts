@@ -1,5 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Schema as MongooseSchema , SchemaTypes } from 'mongoose';
+import { Schema as MongooseSchema, SchemaTypes } from 'mongoose';
 
 export enum MediaType {
   photo = 'photo',
@@ -41,6 +41,9 @@ export class User {
   @Prop({ type: Boolean, default: false })
   isOnline: boolean;
 
+  @Prop({ type: Boolean, default: false })
+  isVerified: boolean;
+
   @Prop([{ type: SchemaTypes.ObjectId, ref: 'Message' }])
   messages: MongooseSchema.Types.ObjectId[];
 
@@ -49,6 +52,26 @@ export class User {
 
   @Prop({ type: ContactInfo, ref: 'ContactInfo' })
   contactInfo: ContactInfo;
+
+  @Prop({ type: Date, default: Date.now })
+  createdAt: Date;
+
+  @Prop({ type: Date, default: Date.now })
+  updatedAt: Date;
+}
+@Schema()
+export class OTP {
+  @Prop({ type: SchemaTypes.ObjectId, required: true })
+  user: string;
+
+  @Prop({ type: String, required: true, unique: true })
+  email: string;
+
+  @Prop({ type: String })
+  code: string;
+
+  @Prop({ type: Date, default: () => Date.now() - 60000 })
+  expireAt: Date;
 
   @Prop({ type: Date, default: Date.now })
   createdAt: Date;
@@ -71,23 +94,8 @@ export class Group {
   @Prop({ type: SchemaTypes.ObjectId, ref: 'Message' })
   lastMessage?: MongooseSchema.Types.ObjectId;
 
-  @Prop({ type: Date, default: Date.now })
-  createdAt: Date;
-
-  @Prop({ type: Date, default: Date.now })
-  updatedAt: Date;
-}
-
-@Schema()
-export class GroupUser {
-  @Prop({ type: SchemaTypes.ObjectId, required: true, ref: 'User' })
-  user: MongooseSchema.Types.ObjectId;
-
-  @Prop({ type: SchemaTypes.ObjectId, required: true, ref: 'Group' })
-  group: MongooseSchema.Types.ObjectId;
-
-  @Prop({ type: String, enum: GroupRole, required: true })
-  role: GroupRole;
+  @Prop({ type: SchemaTypes.ObjectId, ref: 'User' })
+  admin: string;
 
   @Prop({ type: Date, default: Date.now })
   createdAt: Date;
@@ -129,4 +137,4 @@ export class Message {
 export const UserSchema = SchemaFactory.createForClass(User);
 export const MessageSchema = SchemaFactory.createForClass(Message);
 export const GroupSchema = SchemaFactory.createForClass(Group);
-export const GroupUserSchema = SchemaFactory.createForClass(GroupUser);
+export const OTPSchema = SchemaFactory.createForClass(OTP);

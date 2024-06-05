@@ -1,84 +1,79 @@
-import {
-  ConflictException,
-  Injectable,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 
+import { JwtService } from '@nestjs/jwt';
 import { InjectModel } from '@nestjs/mongoose';
 import * as argon2 from 'argon2';
-import { Model } from 'mongoose';
-import { User } from 'src/schema/schema';
-import { RegisterByEmailDto } from './dtos/register-by-email-dto';
-import * as _ from 'lodash';
-import { RegisterByPhoneDto } from './dtos/register-by-phone-dto';
-import { SignInDto } from './dtos/signin-dto';
-import { JwtService } from '@nestjs/jwt';
 import * as jwt from 'jsonwebtoken';
+import { Model } from 'mongoose';
+import { EmailService } from 'src/email/email.service';
+import { OTP, User } from 'src/schema/schema';
+import { RegisterByEmailDto } from './dtos/register-by-email-dto';
+import { SignInDto } from './dtos/signin-dto';
+import { VerifyEmailDto } from './dtos/verify-OTP-dto';
 
 @Injectable()
 export class AuthService {
   constructor(
-    @InjectModel(User.name) private userModel: Model<User>,
+    @InjectModel(User.name) private UserModel: Model<User>,
+    @InjectModel(OTP.name) private OTPModel: Model<OTP>,
     private jwtService: JwtService,
+    private emailService: EmailService,
   ) {}
 
-  async registerByEmail({ email, password }: RegisterByEmailDto): Promise<any> {
-    const existingUser = await this.userModel.findOne({
+  async register({
+    email,
+    password,
+    firstName,
+    lastName,
+  }: RegisterByEmailDto): Promise<any> {
+    const existingUser = await this.UserModel.findOne({
       username: email,
     });
-    if (existingUser) {
-      throw new ConflictException('Already has an account');
+
+    if (existingUser && existingUser.isVerified) {
+      return {
+        success: false,
+        message: 'Email already exists.',
+      };
+    }
+
+    if (existingUser && !existingUser.isVerified) {
+      const code = await this.emailService.sendVerificationEmail(email);
+
+      if (code) {
+        await this.OTPModel.findOneAndUpdate(
+          { user: existingUser._id },
+          {
+            code: code,
+          },
+        );
+      }
+      return {
+        email: existingUser.contactInfo.email,
+        success: true,
+        message: 'An OTP has been sent to your email.',
+      };
     }
 
     const hashedPassword = await argon2.hash(password);
-    const user = await this.userModel.create({
+    const user = await this.UserModel.create({
       username: email,
       password: hashedPassword,
+      firstName: firstName,
+      lastName: lastName,
       contactInfo: { email: email },
     });
 
-    const userWithoutSensitiveInfo = _.omit(user.toObject(), [
-      'password',
-      'createdAt',
-      'updatedAt',
-      'groups',
-      'contactInfo',
-      'messages',
-      'isOnline',
-      '_id',
-      '__v',
-    ]);
+    const code = await this.emailService.sendVerificationEmail(email);
 
-    const loginInfo = await this.signIn({ username: email, password });
-    return { ...userWithoutSensitiveInfo, ...loginInfo };
-  }
-
-  async registerByPhone({ phone, password }: RegisterByPhoneDto) {
-    const existingUser = await this.userModel.findOne({ username: phone });
-    if (existingUser) {
-      throw new ConflictException('Already has an account');
+    if (code) {
+      await this.OTPModel.create({ user: user._id, code: code, email });
+      return {
+        email: email,
+        success: true,
+        message: 'An OTP has been sent to your email.',
+      };
     }
-    const hashedPassword = await argon2.hash(password);
-    const user = await this.userModel.create({
-      username: phone,
-      password: hashedPassword,
-      contactInfo: { phone },
-    });
-
-    const userWithoutSensitiveInfo = _.omit(user.toObject(), [
-      'password',
-      'createdAt',
-      'updatedAt',
-      'groups',
-      'contactInfo',
-      'messages',
-      'isOnline',
-      '_id',
-      '__v',
-    ]);
-
-    const loginInfo = await this.signIn({ username: phone, password });
-    return { ...userWithoutSensitiveInfo, ...loginInfo };
   }
 
   async signIn({ username, password }: SignInDto) {
@@ -93,7 +88,7 @@ export class AuthService {
   }
 
   async validateUser(username: string, password: string): Promise<any> {
-    const user = await this.userModel.findOne({ username: username });
+    const user = await this.UserModel.findOne({ username: username });
     if (user && (await argon2.verify(user.password, password))) {
       delete user.password;
       return user;
@@ -111,12 +106,40 @@ export class AuthService {
       return null;
     }
   }
+  async verifyEmail({ code, email }: VerifyEmailDto) {
+    const verificationEntry = await this.OTPModel.findOne({ email: email });
 
-  updateUser(userId, { firstName, lastName }) {
-    return this.userModel.findByIdAndUpdate(
-      userId,
-      { firstName, lastName },
-      { new: true },
-    );
+    if (!verificationEntry) {
+      return {
+        message: 'Invalid OTP',
+        success: false,
+      };
+    }
+
+    if (verificationEntry.code !== code) {
+      return {
+        message: 'Invalid OTP',
+        success: false,
+      };
+    }
+
+    const user = await this.UserModel.findById(verificationEntry.user);
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    await this.OTPModel.findByIdAndUpdate(verificationEntry._id, {
+      isVerified: true,
+    });
+
+    await this.OTPModel.findByIdAndDelete(verificationEntry._id);
+
+    const payload = { username: user.username, sub: user._id };
+    return {
+      success: true,
+      message: 'Email verified successfully',
+      access_token: this.jwtService.sign(payload),
+      username: user.username,
+    };
   }
 }

@@ -14,7 +14,7 @@ import { Model } from 'mongoose';
 import { Server, Socket } from 'socket.io';
 import { AuthService } from 'src/auth/auth.service';
 import { WsJwtAuthGuard } from 'src/auth/ws-jwt.guard';
-import { Group, GroupUser, Message, User } from 'src/schema/schema';
+import { Group, Message, User } from 'src/schema/schema';
 import { JoinGroupPayloadDto } from './dtos/join-payload.dto';
 import { MessagePayloadDto } from './dtos/message-payload-dto';
 
@@ -27,7 +27,6 @@ export class RealtimeChatGateway
   @WebSocketServer() server: Server;
   constructor(
     @InjectModel(Group.name) private groupModel: Model<Group>,
-    @InjectModel(GroupUser.name) private groupUserModel: Model<GroupUser>,
     @InjectModel(Message.name) private messageModel: Model<Message>,
     @InjectModel(User.name) private userModel: Model<User>,
     private authService: AuthService,
@@ -125,18 +124,9 @@ export class RealtimeChatGateway
 
         const group = await this.groupModel.create({
           users: [user['sub'], participant._id],
+          admin: user['sub'],
         });
         console.log(group._id.toString());
-        this.groupUserModel.create({
-          user: user['sub'],
-          group: group._id,
-          role: 'admin',
-        });
-        this.groupUserModel.create({
-          user: participant._id,
-          group: group._id,
-          role: 'member',
-        });
         await this.userModel.findByIdAndUpdate(user['sub'], {
           $push: {
             groups: group._id,

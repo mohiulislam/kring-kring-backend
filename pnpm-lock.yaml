@@ -65,6 +65,9 @@ importers:
       mongoose:
         specifier: ^8.3.2
         version: 8.3.2
+      nodemailer:
+        specifier: ^6.9.13
+        version: 6.9.13
       passport-jwt:
         specifier: ^4.0.1
         version: 4.0.1
@@ -2579,6 +2582,10 @@ packages:
   node-source-walk@6.0.2:
     resolution: {integrity: sha512-jn9vOIK/nfqoFCcpK89/VCVaLg1IHE6UVfDOzvqmANaJ/rWCTEdH8RZ1V278nv2jr36BJdyQXIAavBLXpzdlag==}
     engines: {node: '>=14'}
+
+  nodemailer@6.9.13:
+    resolution: {integrity: sha512-7o38Yogx6krdoBf3jCAqnIN4oSQFx+fMa0I7dK1D+me9kBxx12D+/33wSb+fhOCtIxvYJ+4x4IMEhmhCKfAiOA==}
+    engines: {node: '>=6.0.0'}
 
   normalize-path@3.0.0:
     resolution: {integrity: sha512-6eZs5Ls3WtCisHWp9S2GUy8dqkpGi4BVSz3GaqiE6ezub0512ESztXUwUB6C6IKbQkY2Pnb/mD4WYojCRwcwLA==}
@@ -6405,6 +6412,8 @@ snapshots:
   node-source-walk@6.0.2:
     dependencies:
       '@babel/parser': 7.24.4
+
+  nodemailer@6.9.13: {}
 
   normalize-path@3.0.0: {}
 

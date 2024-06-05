@@ -3,8 +3,6 @@ import { MongooseModule } from '@nestjs/mongoose';
 import {
   Group,
   GroupSchema,
-  GroupUser,
-  GroupUserSchema,
   Message,
   MessageSchema,
   User,
@@ -20,10 +18,7 @@ import { RealtimeChatGateway } from './realtime-chat.gateway';
     ConfigModule,
     MongooseModule.forFeature([
       { name: Group.name, schema: GroupSchema },
-      {
-        name: GroupUser.name,
-        schema: GroupUserSchema,
-      },
+
       {
         name: Message.name,
         schema: MessageSchema,
