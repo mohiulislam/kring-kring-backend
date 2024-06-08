@@ -79,7 +79,7 @@ export class AuthService {
   async signIn({ username, password }: SignInDto) {
     const user = await this.validateUser(username, password);
     if (!user) {
-      throw new UnauthorizedException('Invalid credentials');
+      throw new UnauthorizedException();
     }
     const payload = { username: user.username, sub: user._id };
     const pickedUser = _.pick(user, [
