@@ -1,5 +1,4 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsNotEmpty, IsOptional } from 'class-validator';
+import { IsNotEmpty, IsString } from 'class-validator';
 
 export class MessagePayloadDto {
   @IsString()
@@ -9,8 +8,4 @@ export class MessagePayloadDto {
   @IsString()
   @IsNotEmpty()
   message: string;
-
-  @IsString()
-  @IsOptional()
-  type?: string;
 }

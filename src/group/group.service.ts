@@ -7,10 +7,13 @@ import { User } from 'src/schema/schema';
 export class GroupService {
   constructor(@InjectModel(User.name) private userModel: Model<User>) {}
   async getGroups(userId) {
-    const user = await this.userModel
-      .findOne({ _id: userId })
-      .populate({ path: 'groups', populate: { path: 'users' } });
-
+    const user = await this.userModel.findOne({ _id: userId }).populate([
+      {
+        path: 'groups',
+        select: '-messages',
+        populate: [{ path: 'users' }, { path: 'lastMessage' }],
+      },
+    ]);
     return user.groups;
   }
 }

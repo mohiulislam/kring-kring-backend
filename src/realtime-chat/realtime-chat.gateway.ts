@@ -6,6 +6,7 @@ import {
   MessageBody,
   OnGatewayConnection,
   OnGatewayDisconnect,
+  OnGatewayInit,
   SubscribeMessage,
   WebSocketGateway,
   WebSocketServer,
@@ -15,14 +16,16 @@ import { Server, Socket } from 'socket.io';
 import { AuthService } from 'src/auth/auth.service';
 import { WsJwtAuthGuard } from 'src/auth/ws-jwt.guard';
 import { Group, Message, User } from 'src/schema/schema';
-import { JoinGroupPayloadDto } from './dtos/join-payload.dto';
 import { MessagePayloadDto } from './dtos/message-payload-dto';
+import { log } from 'console';
+import { JoinWithParticipantPayloadDto } from './dtos/join-group-with-participant-payload.dto';
+import { JoinGroupPayloadDto } from './dtos/join-group.dto';
 
 @UseGuards(WsJwtAuthGuard)
-@WebSocketGateway({ namespace: 'chatWS' })
+@WebSocketGateway({ namespace: 'realtime-chat', cors: true })
 @UsePipes(new ValidationPipe())
 export class RealtimeChatGateway
-  implements OnGatewayConnection, OnGatewayDisconnect
+  implements OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit
 {
   @WebSocketServer() server: Server;
   constructor(
@@ -38,49 +41,92 @@ export class RealtimeChatGateway
     { socketId: string; user: User }
   >();
 
-  async handleConnection(@ConnectedSocket() client: Socket) {
-    const { authorization } = client.handshake.headers;
-    if (!authorization) {
-      client.disconnect();
-      return;
-    }
-    const decoded = await this.authService.verifyJWTBearerToken(
-      authorization,
-      this.configService.get('JWT_SECRET'),
-    );
+  private socketIdToUserIdMap = new Map<string, string>();
 
-    if (decoded) {
-      const { sub } = decoded;
-      const user = await this.userModel.findById(sub);
-      if (user) {
-        this.userIdToSocketInfoMap.set(sub, { socketId: client.id, user });
+  afterInit(server: Server) {
+    server.use(async (socket, next) => {
+      const token = socket.handshake.query.token;
+      if (!token) {
+        return next(new Error('Authentication token missing'));
+      }
+      const decoded = await this.authService.verifyJWT(
+        token,
+        this.configService.get('JWT_SECRET'),
+      );
+      if (decoded) {
+        const user = await this.userModel.findById(decoded.sub);
+        this.userIdToSocketInfoMap.set(decoded.sub, {
+          socketId: socket.id,
+          user: user,
+        });
+        this.socketIdToUserIdMap.set(socket.id, decoded.sub);
+        next();
       } else {
-        console.error('User not found:', sub);
-        client.disconnect();
+        next(new Error('Invalid authentication token'));
+      }
+    });
+  }
+
+  async handleConnection(@ConnectedSocket() client: Socket) {
+    log(this.socketIdToUserIdMap);
+    log(this.userIdToSocketInfoMap);
+    // const token = client.handshake.query.token;
+    // log(token);
+    // if (!token) {
+    //   client.disconnect();
+    //   return;
+    // }
+    // const decoded = await this.authService.verifyJWT(
+    //   token,
+    //   this.configService.get('JWT_SECRET'),
+    // );
+    // if (decoded) {
+    //   const { sub } = decoded;
+    //   const user = await this.userModel.findById(sub);
+    //   if (user) {
+    //     this.userIdToSocketInfoMap.set(sub, { socketId: client.id, user });
+    //   } else {
+    //     console.error('User not found:', sub);
+    //     client.disconnect();
+    //   }
+    // }
+  }
+
+  async handleDisconnect(@ConnectedSocket() client: Socket) {
+    const userId = this.socketIdToUserIdMap.get(client.id);
+    if (userId) {
+      this.userIdToSocketInfoMap.delete(userId);
+      this.socketIdToUserIdMap.delete(client.id);
+      console.log(`User ${userId} disconnected`);
+    }
+    log(this.socketIdToUserIdMap);
+    log(this.userIdToSocketInfoMap);
+  }
+
+  @SubscribeMessage('joinGroup')
+  async handleJoinGroup(
+    @MessageBody() { groupId }: JoinGroupPayloadDto,
+    @ConnectedSocket() client: Socket,
+  ) {
+    const user = client.handshake.headers.user;
+    const group = await this.groupModel.findById(groupId);
+    if (group) {
+      if (group.users.includes(user['sub'])) {
+        client.join(groupId.toString());
       }
     }
   }
 
-  async handleDisconnect(client: Socket) {
-    const { authorization } = client.handshake.headers;
-    const { sub } = await this.authService.verifyJWTBearerToken(
-      authorization,
-      this.configService.get('JWT_SECRET'),
-    );
-    this.userIdToSocketInfoMap.delete(sub);
-  }
-
-  @UseGuards(WsJwtAuthGuard)
-  @SubscribeMessage('joinGroupWithParticipant')
-  async handleJoinGroup(
-    @MessageBody() { participantUserName }: JoinGroupPayloadDto,
+  @SubscribeMessage('joinWithParticipant')
+  async handleJoinGroupWithParticipant(
+    @MessageBody() { participantUserName }: JoinWithParticipantPayloadDto,
     @ConnectedSocket() client: Socket,
   ) {
     const user = client.handshake.headers.user;
-
     if (user['username'] === participantUserName) {
       return;
     }
+
     const participant = await this.userModel.findOne({
       username: participantUserName,
     });
@@ -94,7 +140,7 @@ export class RealtimeChatGateway
     if (
       existingGroupWithParticipant &&
       (this.server.sockets as any).has(
-        this.userIdToSocketInfoMap.get(user['sub']).socketId,
+        this.userIdToSocketInfoMap.get(user['sub'])?.socketId,
       )
     ) {
       const groupId = existingGroupWithParticipant._id;
@@ -136,29 +182,29 @@ export class RealtimeChatGateway
     }
   }
 
-  @UseGuards(WsJwtAuthGuard)
   @SubscribeMessage('message')
   async handleMessage(
     @MessageBody() { message, groupId }: MessagePayloadDto,
     @ConnectedSocket() client: Socket,
   ) {
-    const sub = client.handshake.headers.user['sub'];
-
+    const user = client.handshake.headers.user;
     this.server.to(groupId).emit('message', {
       content: message,
-      groupId: groupId,
+      group: groupId,
+      createdAt: new Date(),
       user: {
-        firstName: this.userIdToSocketInfoMap.get(sub).user.firstName,
-        lastName: this.userIdToSocketInfoMap.get(sub).user.lastName,
+        userId: user['sub'],
+        firstName: this.userIdToSocketInfoMap.get(user['sub']).user.firstName,
+        lastName: this.userIdToSocketInfoMap.get(user['sub']).user.lastName,
       },
     });
 
     const savedMessage = await this.messageModel.create({
-      user: sub,
+      user: user['sub'],
       content: message,
       group: groupId,
     });
-    await this.userModel.findByIdAndUpdate(sub, {
+    await this.userModel.findByIdAndUpdate(user['sub'], {
       $push: {
         messages: savedMessage._id,
       },

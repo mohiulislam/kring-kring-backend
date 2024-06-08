@@ -10,7 +10,7 @@ import { OTP, User } from 'src/schema/schema';
 import { RegisterByEmailDto } from './dtos/register-by-email-dto';
 import { SignInDto } from './dtos/signin-dto';
 import { VerifyEmailDto } from './dtos/verify-OTP-dto';
-
+import * as _ from 'lodash';
 @Injectable()
 export class AuthService {
   constructor(
@@ -82,8 +82,15 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
     const payload = { username: user.username, sub: user._id };
+    const pickedUser = _.pick(user, [
+      'username',
+      '_id',
+      'firstName',
+      'lastName',
+    ]);
     return {
       access_token: this.jwtService.sign(payload),
+      user: pickedUser,
     };
   }
 
@@ -96,9 +103,8 @@ export class AuthService {
     return null;
   }
 
-  async verifyJWTBearerToken(bearerToken, secretKey) {
+  async verifyJWT(token, secretKey) {
     try {
-      const token = bearerToken.split(' ')[1];
       const decoded = jwt.verify(token, secretKey);
       return decoded;
     } catch (error) {

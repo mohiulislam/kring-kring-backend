@@ -1,17 +1,12 @@
-import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
 import { AppController } from './app.controller';
 import { AuthModule } from './auth/auth.module';
-import { GroupMessageController } from './group-message/group-message.controller';
-import { GroupMessageModule } from './group-message/group-message.module';
-import { GroupController } from './group/group.controller';
-import { GroupModule } from './group/group.module';
-import { JwtUserAuthenticationMiddleware } from './middlewares/auth.middleware';
-import { RealtimeChatModule } from './realtime-chat/realtime-chat.module';
-import { EmailService } from './email/email.service';
 import { EmailModule } from './email/email.module';
-
+import { GroupMessageModule } from './group-message/group-message.module';
+import { GroupModule } from './group/group.module';
+import { RealtimeChatModule } from './realtime-chat/realtime-chat.module';
 
 @Module({
   imports: [
@@ -34,8 +29,4 @@ import { EmailModule } from './email/email.module';
   ],
   controllers: [AppController],
 })
-export class AppModule implements NestModule {
-  configure(consumer: MiddlewareConsumer) {
-    consumer.apply(JwtUserAuthenticationMiddleware).forRoutes(GroupController,GroupMessageController);
-  }
-}
+export class AppModule {}

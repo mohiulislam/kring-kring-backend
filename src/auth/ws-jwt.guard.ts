@@ -2,6 +2,7 @@ import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
 import { Socket } from 'socket.io';
 import { ConfigService } from '@nestjs/config';
 import { AuthService } from './auth.service';
+import { log } from 'console';
 
 @Injectable()
 export class WsJwtAuthGuard implements CanActivate {
@@ -15,10 +16,9 @@ export class WsJwtAuthGuard implements CanActivate {
       return true;
     }
     const client = context.switchToWs().getClient<Socket>();
-    const bearerToken = client.handshake.headers.authorization;
-
-    const decoded = await this.authService.verifyJWTBearerToken(
-      bearerToken,
+    const token = client.handshake.query.token;
+    const decoded = await this.authService.verifyJWT(
+      token,
       this.configService.get('JWT_SECRET'),
     );
     client.handshake.headers.user = decoded;

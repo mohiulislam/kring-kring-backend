@@ -1,8 +1,8 @@
-import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Query, UseGuards } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
-import { ApiParam, ApiQuery, ApiSecurity, ApiTags } from '@nestjs/swagger';
-import { MessageService } from './group-message.service';
+import { ApiQuery, ApiSecurity, ApiTags } from '@nestjs/swagger';
 import { Sub } from 'src/decorators/sub.decorator';
+import { MessageService } from './group-message.service';
 
 @ApiSecurity('JWT-auth')
 @UseGuards(AuthGuard('jwt'))
@@ -11,12 +11,12 @@ import { Sub } from 'src/decorators/sub.decorator';
 export class GroupMessageController {
   constructor(private messageService: MessageService) {}
 
-  @Get(':id')
-  @ApiParam({
-    name: 'id',
+  @Get()
+  @ApiQuery({
+    name: 'groupId',
     type: String,
     required: true,
-    example: '664431ba3db05983cba120ff',
+    example: '66604d2fecc21e0241eb5383',
     description: 'The unique identifier of the group.',
   })
   @ApiQuery({
@@ -28,13 +28,13 @@ export class GroupMessageController {
   @ApiQuery({
     name: 'pageSize',
     required: false,
-    example: '3',
+    example: '5',
     description: 'Size of each page for pagination',
   })
   getGroupMessages(
-    @Param('id') id,
-    @Query('pageNumber') pageNumber: string,
-    @Query('pageSize') pageSize: string,
+    @Query('groupId') groupId,
+    @Query('pageNumber') pageNumber,
+    @Query('pageSize') pageSize,
     @Sub() userId,
   ) {
     const pageNumberNumber = Number(pageNumber);
@@ -43,9 +43,8 @@ export class GroupMessageController {
     if (isNaN(pageNumberNumber) || isNaN(pageSizeNumber)) {
       throw new Error('Invalid input for pageNumber or pageSize');
     }
-
     return this.messageService.getGroupMessages({
-      groupId: id,
+      groupId: groupId,
       pageNumber: pageNumberNumber,
       pageSize: pageSizeNumber,
       userId,
