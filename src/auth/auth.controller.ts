@@ -28,14 +28,6 @@ export class AuthController {
   @UseGuards(AuthGuard('local'))
   @Post('login')
   @ApiOperation({ summary: 'Login a user' })
-  @ApiResponse({
-    status: HttpStatus.OK,
-    description: 'The user has been successfully logged in.',
-  })
-  @ApiResponse({
-    status: HttpStatus.UNAUTHORIZED,
-    description: 'Invalid credentials.',
-  })
   async signIn(@Body() signInDto: SignInDto) {
     return this.authService.signIn(signInDto);
   }

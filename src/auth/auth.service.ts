@@ -1,16 +1,16 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 
 import { JwtService } from '@nestjs/jwt';
 import { InjectModel } from '@nestjs/mongoose';
 import * as argon2 from 'argon2';
 import * as jwt from 'jsonwebtoken';
+import * as _ from 'lodash';
 import { Model } from 'mongoose';
 import { EmailService } from 'src/email/email.service';
 import { OTP, User } from 'src/schema/schema';
 import { RegisterByEmailDto } from './dtos/register-by-email-dto';
 import { SignInDto } from './dtos/signin-dto';
 import { VerifyEmailDto } from './dtos/verify-OTP-dto';
-import * as _ from 'lodash';
 @Injectable()
 export class AuthService {
   constructor(
@@ -77,13 +77,12 @@ export class AuthService {
   }
 
   async signIn({ username, password }: SignInDto) {
-    const user = await this.validateUser(username, password);
-    if (!user) {
-      throw new UnauthorizedException();
-    }
+    const user = await this.UserModel.findOne({ username: username });
+
     const payload = { username: user.username, sub: user._id };
     const pickedUser = _.pick(user, [
       'username',
+      'contactInfo',
       '_id',
       'firstName',
       'lastName',
@@ -100,7 +99,6 @@ export class AuthService {
       delete user.password;
       return user;
     }
-    return null;
   }
 
   async verifyJWT(token, secretKey) {
