@@ -21,9 +21,12 @@ export class MessageService {
       await group.populate({
         path: 'messages',
         select: 'user content createdAt -_id',
+        options: {
+          sort: { createdAt: -1 }, 
+        },
       })
     ).messages;
     const paginatedMessages = messages.slice(skip, skip + pageSize);
     return paginatedMessages;
-  }
+  } 
 }

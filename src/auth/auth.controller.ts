@@ -1,7 +1,7 @@
 import { Body, Controller, HttpStatus, Post, UseGuards } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
-import { AuthService } from './auth.service';
+import { AuthService } from './auth.service'; 
 import { RegisterByEmailDto } from './dtos/register-by-email-dto';
 import { SignInDto } from './dtos/signin-dto';
 import { VerifyEmailDto } from './dtos/verify-OTP-dto';

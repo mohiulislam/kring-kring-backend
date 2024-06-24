@@ -5,3 +5,4 @@ export class JoinWithParticipantPayloadDto {
   @IsString()
   participantUserName: string;
 }
+ 

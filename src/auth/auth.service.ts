@@ -110,7 +110,7 @@ export class AuthService {
       return null;
     }
   }
-  async verifyEmail({ code, email }: VerifyEmailDto) {
+  async verifyEmail({ code, email }: VerifyEmailDto) { 
     const verificationEntry = await this.OTPModel.findOne({ email: email });
 
     if (!verificationEntry) {
@@ -132,9 +132,9 @@ export class AuthService {
       throw new Error('User not found');
     }
 
-    await this.OTPModel.findByIdAndUpdate(verificationEntry._id, {
+    await this.UserModel.findByIdAndUpdate(verificationEntry.user, {
       isVerified: true,
-    });
+    }); 
 
     await this.OTPModel.findByIdAndDelete(verificationEntry._id);
 

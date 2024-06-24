@@ -68,6 +68,7 @@ export class RealtimeChatGateway
   }
 
   async handleConnection(@ConnectedSocket() client: Socket) {
+    console.log(client.id);
   }
 
   async handleDisconnect(@ConnectedSocket() client: Socket) {
@@ -85,11 +86,19 @@ export class RealtimeChatGateway
     @ConnectedSocket() client: Socket,
   ) {
     const user = client.handshake.headers.user;
+
     const group = await this.groupModel.findById(groupId);
-    if (group) {
-      if (group.users.includes(user['sub'])) {
-        client.join(groupId.toString());
-      }
+    console.log(group);
+  
+    // !group.users.some((userId) => userId.toString() === user['sub'])
+    if (
+      group 
+    ) {
+      client.join(groupId.toString());
+    } else {
+      console.log(
+        `User ${user['sub']} attempted to join a group they're already part of or which doesn't exist.`,
+      );
     }
   }
 
@@ -99,6 +108,8 @@ export class RealtimeChatGateway
     @ConnectedSocket() client: Socket,
   ) {
     const user = client.handshake.headers.user;
+    console.log(user['username'] === participantUserName);
+
     if (user['username'] === participantUserName) {
       return;
     }
@@ -106,7 +117,7 @@ export class RealtimeChatGateway
     const participant = await this.userModel.findOne({
       username: participantUserName,
     });
-
+    console.log(participant._id);
     if (!participant) {
       throw new WsException('Participant not found');
     }
@@ -125,17 +136,38 @@ export class RealtimeChatGateway
       users: [user['sub'], participant._id],
       admin: user['sub'],
     });
-    const participantClient = (this.server.sockets as any).get(
-      this.userIdToSocketInfoMap.get(participant._id.toString()).socketId,
-    );
-    client.join(group._id.toString());
-    participantClient.join(group._id.toString());
-    console.log(group._id.toString());
+
     await this.userModel.findByIdAndUpdate(user['sub'], {
       $push: {
         groups: group._id,
       },
     });
+    console.log(participant._id);
+
+    await this.userModel.findByIdAndUpdate(participant._id, {
+      $push: {
+        groups: group._id,
+      },
+    });
+
+    const participantSocketInfo = this.userIdToSocketInfoMap.get(
+      participant._id.toString(),
+    );
+
+    if (!participantSocketInfo) {
+      console.error(
+        `Participant ${participant._id} not found in userIdToSocketInfoMap`,
+      );
+      return;
+    }
+
+    const participantClient = (this.server.sockets as any).get(
+      participantSocketInfo.socketId,
+    );
+
+    client.join(group._id.toString());
+    participantClient.join(group._id.toString());
+    console.log(group._id.toString());
   }
 
   @SubscribeMessage('message')
@@ -149,7 +181,7 @@ export class RealtimeChatGateway
       group: groupId,
       createdAt: new Date(),
       user: {
-        userId: user['sub'],
+        _id: user['sub'],
         firstName: this.userIdToSocketInfoMap.get(user['sub']).user.firstName,
         lastName: this.userIdToSocketInfoMap.get(user['sub']).user.lastName,
       },

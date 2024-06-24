@@ -23,8 +23,6 @@ export class ContactInfo {
 
 @Schema()
 export class User {
-  
-
   @Prop({ type: String, required: true, unique: true })
   username: string;
 
@@ -61,6 +59,7 @@ export class User {
   @Prop({ type: Date, default: Date.now })
   updatedAt: Date;
 }
+
 @Schema()
 export class OTP {
   @Prop({ type: SchemaTypes.ObjectId, required: true })
