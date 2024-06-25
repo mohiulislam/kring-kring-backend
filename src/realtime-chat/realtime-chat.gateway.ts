@@ -18,7 +18,6 @@ import { AuthService } from 'src/auth/auth.service';
 import { WsJwtAuthGuard } from 'src/auth/ws-jwt.guard';
 import { Group, Message, User } from 'src/schema/schema';
 import { JoinGroupPayloadDto } from './dtos/join-group.dto';
-import { JoinWithParticipantPayloadDto } from './dtos/join-with-participant-payload.dto';
 import { MessagePayloadDto } from './dtos/message-payload-dto';
 
 @UseGuards(WsJwtAuthGuard)
@@ -89,9 +88,7 @@ export class RealtimeChatGateway
 
     const group = await this.groupModel.findById(groupId);
     // !group.users.some((userId) => userId.toString() === user['sub'])
-    if (
-      group 
-    ) {
+    if (group) {
       client.join(groupId.toString());
     } else {
       console.log(
@@ -100,73 +97,73 @@ export class RealtimeChatGateway
     }
   }
 
-  @SubscribeMessage('joinWithParticipant')
-  async handleJoinGroupWithParticipant(
-    @MessageBody() { participantUserName }: JoinWithParticipantPayloadDto,
-    @ConnectedSocket() client: Socket,
-  ) {
-    const user = client.handshake.headers.user;
-    console.log(user['username'] === participantUserName);
+  // @SubscribeMessage('joinWithParticipant')
+  // async handleJoinGroupWithParticipant(
+  //   @MessageBody() { participantUserName }: JoinWithParticipantPayloadDto,
+  //   @ConnectedSocket() client: Socket,
+  // ) {
+  //   const user = client.handshake.headers.user;
+  //   console.log(user['username'] === participantUserName);
 
-    if (user['username'] === participantUserName) {
-      return;
-    }
+  //   if (user['username'] === participantUserName) {
+  //     return;
+  //   }
 
-    const participant = await this.userModel.findOne({
-      username: participantUserName,
-    });
-    console.log(participant._id);
-    if (!participant) {
-      throw new WsException('Participant not found');
-    }
+  //   const participant = await this.userModel.findOne({
+  //     username: participantUserName,
+  //   });
+  //   console.log(participant._id);
+  //   if (!participant) {
+  //     throw new WsException('Participant not found');
+  //   }
 
-    const existingGroupWithParticipant = await this.groupModel.findOne({
-      $and: [
-        { users: { $in: user['sub'] } },
-        { users: { $in: [participant._id] } },
-      ],
-    });
+  //   const existingGroupWithParticipant = await this.groupModel.findOne({
+  //     $and: [
+  //       { users: { $in: user['sub'] } },
+  //       { users: { $in: [participant._id] } },
+  //     ],
+  //   });
 
-    if (existingGroupWithParticipant) {
-      throw new WsException('participant already in group');
-    }
-    const group = await this.groupModel.create({
-      users: [user['sub'], participant._id],
-      admin: user['sub'],
-    });
+  //   if (existingGroupWithParticipant) {
+  //     throw new WsException('participant already in group');
+  //   }
+  //   const group = await this.groupModel.create({
+  //     users: [user['sub'], participant._id],
+  //     admin: user['sub'],
+  //   });
 
-    await this.userModel.findByIdAndUpdate(user['sub'], {
-      $push: {
-        groups: group._id,
-      },
-    });
-    console.log(participant._id);
+  //   await this.userModel.findByIdAndUpdate(user['sub'], {
+  //     $push: {
+  //       groups: group._id,
+  //     },
+  //   });
+  //   console.log(participant._id);
 
-    await this.userModel.findByIdAndUpdate(participant._id, {
-      $push: {
-        groups: group._id,
-      },
-    });
+  //   await this.userModel.findByIdAndUpdate(participant._id, {
+  //     $push: {
+  //       groups: group._id,
+  //     },
+  //   });
 
-    const participantSocketInfo = this.userIdToSocketInfoMap.get(
-      participant._id.toString(),
-    );
+  //   const participantSocketInfo = this.userIdToSocketInfoMap.get(
+  //     participant._id.toString(),
+  //   );
 
-    if (!participantSocketInfo) {
-      console.error(
-        `Participant ${participant._id} not found in userIdToSocketInfoMap`,
-      );
-      return;
-    }
+  //   if (!participantSocketInfo) {
+  //     console.error(
+  //       `Participant ${participant._id} not found in userIdToSocketInfoMap`,
+  //     );
+  //     return;
+  //   }
 
-    const participantClient = (this.server.sockets as any).get(
-      participantSocketInfo.socketId,
-    );
+  //   const participantClient = (this.server.sockets as any).get(
+  //     participantSocketInfo.socketId,
+  //   );
 
-    client.join(group._id.toString());
-    participantClient.join(group._id.toString());
-    console.log(group._id.toString());
-  }
+  //   client.join(group._id.toString());
+  //   participantClient.join(group._id.toString());
+  //   console.log(group._id.toString());
+  // }
 
   @SubscribeMessage('message')
   async handleMessage(
