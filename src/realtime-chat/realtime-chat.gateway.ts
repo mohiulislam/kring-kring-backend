@@ -88,8 +88,6 @@ export class RealtimeChatGateway
     const user = client.handshake.headers.user;
 
     const group = await this.groupModel.findById(groupId);
-    console.log(group);
-  
     // !group.users.some((userId) => userId.toString() === user['sub'])
     if (
       group 
