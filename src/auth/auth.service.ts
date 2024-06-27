@@ -127,7 +127,7 @@ export class AuthService {
       };
     }
 
-    const user = await this.UserModel.findById(verificationEntry.user);
+    const user = await this.UserModel.findById(verificationEntry.user).select("firstName lastName username contactInfo _id" );
     if (!user) {
       throw new Error('User not found');
     }
@@ -143,7 +143,7 @@ export class AuthService {
       success: true,
       message: 'Email verified successfully',
       access_token: this.jwtService.sign(payload),
-      username: user.username,
+      user: user,
     };
   }
 }
